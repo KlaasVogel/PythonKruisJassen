@@ -34,7 +34,7 @@ class Tafels(list):
     self.parent=parent
     self.rondeLabel=tk.Label(self.frame,text="ronde:")
     self.rondeLabel.grid(column=1,row=1)
-
+    
   def set(self,numTafels):
     for tafel in self:
       tafel.reset()
@@ -54,6 +54,7 @@ class Tafel:
 
   def reset(self):
     print("reset: ",self.tafelNummer)
+
 
 if __name__ == "__main__":
   app = MainApp()
