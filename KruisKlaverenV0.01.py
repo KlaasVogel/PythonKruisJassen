@@ -12,9 +12,14 @@ class MainApp(tk.Tk):
   def __init__(self):
     self.root = tk.Tk.__init__(self)
     self.keuzes=KeuzeFrame(self, side=tk.TOP)
+    self.tafels=[]
 
   def reset(self):
-   pass
+    for tafel in self.tafels:
+      tafel.reset()
+
+  def createTables(self):
+    pass
 
 
 class KeuzeFrame(tk.Frame):
@@ -26,6 +31,16 @@ class KeuzeFrame(tk.Frame):
     self.keuzeArray=[16,20,24,28,32]
     self.keuzeMenu=tk.OptionMenu(self,self.keuze,*self.keuzeArray,command=self.parent.reset)
     self.keuzeMenu.pack()
+
+class Tafel(tk.LabelFrame):
+  def __init__(self,parent,*args,**kwargs):
+    pass
+
+  def reset(self):
+    pass
+
+
+
 
 if __name__ == "__main__":
   app = MainApp()
