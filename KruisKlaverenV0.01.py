@@ -33,28 +33,58 @@ class Tafels(list):
     self.frame.pack(kwargs)
     self.parent=parent
     self.rondeLabel=tk.Label(self.frame,text="ronde:")
-    self.rondeLabel.grid(column=1,row=1)
-    
+    self.rondeLabel.grid(column=0,row=0)
+    self.rondenummers=[]
+
   def set(self,numTafels):
     for tafel in self:
       tafel.reset()
+    self.clear()
+    for rondenummer in self.rondenummers:
+      rondenummer.destroy()
+    self.rondenummers=[]
     if numTafels:
+      rondes=int((int(numTafels)*4-1)/3)
+      for x in range(rondes):
+        self.rondenummers.append(tk.Label(self.frame,text="{}".format(x+1)))
+        self.rondenummers[-1].grid(row=x+1,column=0)
       for x in range(int(numTafels)):
-         self.append(Tafel(self.frame,numTafels,x))
+         self.append(Tafel(self.frame,numTafels,x,rondes))
 
-class Tafel:
-  def __init__(self,parent,numTafels,tafelNummer):
-    self.parent=parent
-    self.tafelNummer=tafelNummer
-    self.vakjes=[]
-    self.opties=[]
-    for x in range(int(numTafels)*4):
-      self.opties.append(x+1)
-    print("set: ", tafelNummer,self.opties)
+class Tafel(list):
+  def __init__(self,parent,numTafels,tafelNummer,rondes):
+    self.label=tk.Label(parent, text="Tafel {}".format(tafelNummer+1))
+    self.label.grid(row=0,column=int(1+tafelNummer*4),padx=(25,0))
+    for rondeNummer in range(rondes):
+      self.append(Ronde(parent,numTafels,tafelNummer,rondeNummer))
 
   def reset(self):
-    print("reset: ",self.tafelNummer)
+    for ronde in self:
+      ronde.reset()
+    self.clear()
+    self.label.destroy()
 
+class Ronde:
+  def __init__(self,parent,numTafels,tafelNummer,rondeNummer):
+    self.parent=parent
+    self.tafelNummer=tafelNummer
+    self.optiesFrame=tk.Frame(self.parent,highlightbackground="black",highlightthickness=1)
+    self.optiesFrame.grid(row=rondeNummer+1,column=1 + tafelNummer*4,columnspan=4)
+    self.vlakken=[]
+    self.opties=[]
+    for y in range(4):
+      for x in range(numTafels):
+        value=y*numTafels+x+1
+        self.opties.append(tk.Button(self.optiesFrame,name="button{}{}".format(y,x),bd=1,font=('Helvetica', '7'),text="{}".format(value),command=lambda i=value: self.kiesOptie(i)))
+        self.opties[-1].grid(row=y,column=x,sticky='NESW')
+
+  def kiesOptie(self,*args):
+    print(args)
+
+  def reset(self):
+    for optie in self.opties:
+      optie.destroy()
+    self.optiesFrame.destroy()
 
 if __name__ == "__main__":
   app = MainApp()
