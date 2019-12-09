@@ -23,7 +23,7 @@ class KeuzeFrame(tk.Frame):
     self.pack(kwargs)
     self.parent=parent
     self.keuze=tk.IntVar()
-    self.keuzeArray=[16,20,24,28,32]
+    self.keuzeArray=[4,5,6,7,8]
     self.keuzeMenu=tk.OptionMenu(self,self.keuze,*self.keuzeArray,command=self.parent.reset)
     self.keuzeMenu.pack()
 
@@ -34,12 +34,26 @@ class Tafels(list):
     self.parent=parent
     self.rondeLabel=tk.Label(self.frame,text="ronde:")
     self.rondeLabel.grid(column=1,row=1)
-    self=[]
+    
+  def set(self,numTafels):
+    for tafel in self:
+      tafel.reset()
+    if numTafels:
+      for x in range(int(numTafels)):
+         self.append(Tafel(self.frame,numTafels,x))
 
-  def set(self,numSpelers):
-    if numSpelers:
-      for x in range(int(numSpelers/4)):
-         self.append(Tafel(numSpelers))
+class Tafel:
+  def __init__(self,parent,numTafels,tafelNummer):
+    self.parent=parent
+    self.tafelNummer=tafelNummer
+    self.vakjes=[]
+    self.opties=[]
+    for x in range(int(numTafels)*4):
+      self.opties.append(x+1)
+    print("set: ", tafelNummer,self.opties)
+
+  def reset(self):
+    print("reset: ",self.tafelNummer)
 
 
 if __name__ == "__main__":
