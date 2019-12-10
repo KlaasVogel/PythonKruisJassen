@@ -8,6 +8,7 @@ sys.stdout = MyLogger("SYSTEM_OUTPUT", logging.INFO)
 # Replace stderr with logging to file at ERROR level
 sys.stderr = MyLogger("SYSTEM_ERROR", logging.ERROR)
 
+
 class MainApp(tk.Tk):
   def __init__(self):
     self.root = tk.Tk.__init__(self)
@@ -16,6 +17,7 @@ class MainApp(tk.Tk):
 
   def reset(self,nieuwKeuze):
    self.tafels.set(nieuwKeuze)
+
 
 class KeuzeFrame(tk.Frame):
   def __init__(self,parent,*args,**kwargs):
@@ -26,6 +28,7 @@ class KeuzeFrame(tk.Frame):
     self.keuzeArray=[4,5,6,7,8]
     self.keuzeMenu=tk.OptionMenu(self,self.keuze,*self.keuzeArray,command=self.parent.reset)
     self.keuzeMenu.pack()
+
 
 class Tafels(list):
   def __init__(self,parent,*args,**kwargs):
@@ -51,6 +54,7 @@ class Tafels(list):
       for x in range(int(numTafels)):
          self.append(Tafel(self.frame,numTafels,x,rondes))
 
+
 class Tafel(list):
   def __init__(self,parent,numTafels,tafelNummer,rondes):
     self.label=tk.Label(parent, text="Tafel {}".format(tafelNummer+1))
@@ -64,27 +68,54 @@ class Tafel(list):
     self.clear()
     self.label.destroy()
 
+
 class Ronde:
   def __init__(self,parent,numTafels,tafelNummer,rondeNummer):
     self.parent=parent
     self.tafelNummer=tafelNummer
     self.optiesFrame=tk.Frame(self.parent,highlightbackground="black",highlightthickness=1)
     self.optiesFrame.grid(row=rondeNummer+1,column=1 + tafelNummer*4,columnspan=4)
-    self.vlakken=[]
-    self.opties=[]
+    self.opties={}
     for y in range(4):
       for x in range(numTafels):
         value=y*numTafels+x+1
-        self.opties.append(tk.Button(self.optiesFrame,name="button{}{}".format(y,x),bd=1,font=('Helvetica', '7'),text="{}".format(value),command=lambda i=value: self.kiesOptie(i)))
-        self.opties[-1].grid(row=y,column=x,sticky='NESW')
-
-  def kiesOptie(self,*args):
-    print(args)
+        self.opties[value]=Optie(self.optiesFrame,numTafels*4,value)
 
   def reset(self):
     for optie in self.opties:
       optie.destroy()
     self.optiesFrame.destroy()
+
+
+class Optie:
+  def __init__(self,parent,numTafels,value):
+    self.parent=parent
+    self.value=value
+    self.chosen=False
+    self.active=True
+    self.build(numTafels)
+    self.show(numTafels)
+
+  def build(self,total):
+    if self.active:
+      if self.chosen:
+        pass
+      else:
+        textsize='7' if (total>=7) else '9'
+        self.widget=tk.Button(self.parent,bd=1,font=('Helvetica', textsize),text="{}".format(self.value),command=self.kiesOptie)
+
+  def show(self,total):
+    yMax=int(total/4)+1
+    xMax=int((total+yMax-total%yMax)/yMax)
+    print("test: {} {} - {}-{}".format(total,self.value,yMax,xMax))
+    #self.widget.grid(row=y,column=x,sticky='NESW')
+
+  def reset(self):
+    self.widget.destroy()
+
+  def kiesOptie(self,*args):
+    print(self.waarde)
+
 
 if __name__ == "__main__":
   app = MainApp()
