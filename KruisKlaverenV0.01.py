@@ -69,21 +69,21 @@ class Tafel(list):
     self.label.destroy()
 
 
-class Ronde:
+class Ronde(list):
   def __init__(self,parent,numTafels,tafelNummer,rondeNummer):
     self.parent=parent
     self.tafelNummer=tafelNummer
     self.optiesFrame=tk.Frame(self.parent,highlightbackground="black",highlightthickness=1)
     self.optiesFrame.grid(row=rondeNummer+1,column=1 + tafelNummer*4,columnspan=4)
-    self.opties={}
+    self.opties=[]
     for y in range(4):
       for x in range(numTafels):
         value=y*numTafels+x+1
-        self.opties[value]=Optie(self.optiesFrame,numTafels*4,value)
+        self.opties.append(Optie(self.optiesFrame,numTafels*4,value))
 
   def reset(self):
     for optie in self.opties:
-      optie.destroy()
+      optie.reset()
     self.optiesFrame.destroy()
 
 
@@ -101,20 +101,21 @@ class Optie:
       if self.chosen:
         pass
       else:
-        textsize='7' if (total>=7) else '9'
+        textsize='6' if (total>=7) else '9'
         self.widget=tk.Button(self.parent,bd=1,font=('Helvetica', textsize),text="{}".format(self.value),command=self.kiesOptie)
 
   def show(self,total):
-    yMax=int(total/4)+1
-    xMax=int((total+yMax-total%yMax)/yMax)
-    print("test: {} {} - {}-{}".format(total,self.value,yMax,xMax))
-    #self.widget.grid(row=y,column=x,sticky='NESW')
+    yMax=int(total/4)+1 if (total<=12) else 4
+    xMax=int((total-total%yMax)/yMax)
+    x=int((self.value-1)%xMax)
+    y=int((self.value-1)/xMax)
+    self.widget.grid(row=y,column=x,sticky='NESW')
 
   def reset(self):
     self.widget.destroy()
 
   def kiesOptie(self,*args):
-    print(self.waarde)
+    print(self.value)
 
 
 if __name__ == "__main__":
