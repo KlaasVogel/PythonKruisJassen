@@ -60,7 +60,7 @@ class Tafel(list):
     self.label=tk.Label(parent, text="Tafel {}".format(tafelNummer+1))
     self.label.grid(row=0,column=int(1+tafelNummer*4),padx=(25,0))
     for rondeNummer in range(rondes):
-      self.append(Ronde(parent,numTafels,tafelNummer,rondeNummer))
+      self.append(Ronde(parent,numTafels,tafelNummer,rondeNummer,self.update))
 
   def reset(self):
     for ronde in self:
@@ -68,55 +68,82 @@ class Tafel(list):
     self.clear()
     self.label.destroy()
 
+  def update(self):
+    print("update Tafel")
 
 class Ronde(list):
-  def __init__(self,parent,numTafels,tafelNummer,rondeNummer):
+  def __init__(self,parent,numTafels,tafelNummer,rondeNummer,call_update):
     self.parent=parent
     self.tafelNummer=tafelNummer
+    self.call_update=call_update
     self.optiesFrame=tk.Frame(self.parent,highlightbackground="black",highlightthickness=1)
     self.optiesFrame.grid(row=rondeNummer+1,column=1 + tafelNummer*4,columnspan=4)
     self.opties=[]
     for y in range(4):
       for x in range(numTafels):
         value=y*numTafels+x+1
-        self.opties.append(Optie(self.optiesFrame,numTafels*4,value))
+        self.opties.append(Optie(self.optiesFrame,numTafels*4,value,self.update))
 
   def reset(self):
     for optie in self.opties:
       optie.reset()
     self.optiesFrame.destroy()
 
+  def update(self):
+    count=0
+    for optie in self.opties:
+      if optie.active and optie.chosen:
+        count+=1
+    print("update ronde: {}".format(count))
+
 
 class Optie:
-  def __init__(self,parent,numTafels,value):
+  def __init__(self,parent,numTafels,value,call_update):
     self.parent=parent
     self.value=value
+    self.call_update=call_update
     self.chosen=False
     self.active=True
-    self.build(numTafels)
-    self.show(numTafels)
+    self.total=numTafels
+    self.max=numTafels #deze is nodig voor kleur?
+    self.build()
+    self.show()
 
-  def build(self,total):
+  def build(self):
     if self.active:
+      textsize='6' if (self.total>=7) else '9'
+      bg=
       if self.chosen:
-        pass
+        self.widget=tk.Label(self.parent,bd=1,font=('Helvetica', textsize),text="{}".format(self.value))
       else:
-        textsize='6' if (total>=7) else '9'
         self.widget=tk.Button(self.parent,bd=1,font=('Helvetica', textsize),text="{}".format(self.value),command=self.kiesOptie)
 
-  def show(self,total):
-    yMax=int(total/4)+1 if (total<=12) else 4
-    xMax=int((total-total%yMax)/yMax)
+  def show(self):
+    yMax=int(self.total/4)+1 if (self.total<=12) else 4
+    xMax=int((self.total-self.total%yMax)/yMax)
     x=int((self.value-1)%xMax)
     y=int((self.value-1)/xMax)
     self.widget.grid(row=y,column=x,sticky='NESW')
 
-  def reset(self):
+  def setTotal(self, total):
+    self.total=total
+    self.widget.destroy()
+    self.show()
+
+  def disable(self):
+    self.active=False
     self.widget.destroy()
 
   def kiesOptie(self,*args):
-    print(self.value)
+    print("kies optie: {}".format(self.value))
+    self.chosen=True
+    self.widget.destroy()
+    self.build()
+    self.show()
+    self.call_update()
 
+  def colorPicker(self):
+    pass
 
 if __name__ == "__main__":
   app = MainApp()
