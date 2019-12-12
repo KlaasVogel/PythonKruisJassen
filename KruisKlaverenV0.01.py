@@ -108,11 +108,19 @@ class Ronde(list):
     self.optiesFrame.destroy()
 
   def update(self):
-    count=0
+    #check if round is full (4 players) and disable rest
+    chosen=0
     for optie in self.opties:
       if optie.active and optie.chosen:
-        count+=1
-    print("update ronde: {}".format(count))
+        chosen+=1
+    if (chosen>=4):
+      x=0
+      for optie in self.opties:
+        if not optie.chosen:
+          optie.disable()
+        else:
+          x+=1
+          optie.setFinal(x)
 
 
 class Optie:
@@ -122,34 +130,37 @@ class Optie:
     self.call_update=call_update
     self.chosen=False
     self.active=True
-    self.total=numSpelers
     self.colors=colorPicker(1,numSpelers,value)
+    self.coords=self.getCoords(numSpelers)
+    self.textsize='6' if (numSpelers>=7) else '9'
     self.build()
-    self.show()
 
   def build(self):
     if self.active:
-      textsize='6' if (self.total>=7) else '9'
       if self.chosen:
-        self.widget=tk.Label(self.parent,bg=self.colors[1],bd=1,font=('Helvetica', textsize),text="{}".format(self.value))
+        self.widget=tk.Label(self.parent,bg=self.colors[1],bd=1,font=('Helvetica', self.textsize),text="{}".format(self.value))
       else:
-        self.widget=tk.Button(self.parent,bg=self.colors[0],bd=1,font=('Helvetica', textsize),text="{}".format(self.value),command=self.kiesOptie)
+        self.widget=tk.Button(self.parent,bg=self.colors[0],bd=1,font=('Helvetica', self.textsize),text="{}".format(self.value),command=self.kiesOptie)
+      self.show()
 
   def reset(self):
     if self.active:
       self.widget.destroy()
 
-  def show(self):
-    yMax=int(self.total/4)+1 if (self.total<=12) else 4
-    xMax=int((self.total-self.total%yMax)/yMax)
+  def getCoords(self,total):
+    xMax=int((total-total%4)/4)
     x=int((self.value-1)%xMax)
     y=int((self.value-1)/xMax)
-    self.widget.grid(row=y,column=x,sticky='NESW')
+    return [x,y]
 
-  def setTotal(self, total):
-    self.total=total
+  def show(self):
+    self.widget.grid(row=self.coords[1],column=self.coords[0],sticky='NESW')
+
+  def setFinal(self, x):
+    self.textsize='11'
+    self.coords=[x,0]
     self.widget.destroy()
-    self.show()
+    self.build()
 
   def disable(self):
     self.active=False
@@ -160,7 +171,6 @@ class Optie:
     self.chosen=True
     self.widget.destroy()
     self.build()
-    self.show()
     self.call_update()
 
 
