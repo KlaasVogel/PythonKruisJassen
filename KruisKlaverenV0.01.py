@@ -11,16 +11,20 @@ sys.stderr = MyLogger("SYSTEM_ERROR", logging.ERROR)
 
 
 def colorPicker(min,max,value):
-  values=[256,154,100]
+  values=[154,100,255]
+  schema=[[1,0,0],[1,1,0],[0,1,0],[0,1,1],[0,0,1],[1,0,1]]
+  kleuren=["#","#"]
   #bepaal welk kwintiel
   kwintiel=ceil(5*value/(max-min+1))
-  tussenwaarde=(value/(kwintiel*(max-min+1)/5))-1
-  startKleur=100
-  eindKleur=256
-  kleur=int(tussenwaarde*(eindKleur-startKleur))
-  print("kleurkiezer: {}: kwintiel: {} - {} : {}".format(value,kwintiel,tussenwaarde,kleur))
-
-  return ["#ff9a9a","#ff6464"]
+  tussenwaarde=5*(value)/(max-min+1)-kwintiel+1
+  for x in range(2):
+    for i in range(3):
+      startKleur = values[2] if (schema[kwintiel-1][i]) else values[x]
+      eindKleur = values[2] if (schema[kwintiel][i]) else values[x]
+      kleuren[x]+=hex(int(startKleur+tussenwaarde*(eindKleur-startKleur)))[2:]
+  #print("{} : {} , {} - {}".format(value,kwintiel,tussenwaarde,kleuren))
+  #kleuren=["#ffa9a9","#ff6464"]
+  return kleuren
 
 
 class MainApp(tk.Tk):
