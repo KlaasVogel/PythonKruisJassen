@@ -11,16 +11,20 @@ sys.stderr = MyLogger("SYSTEM_ERROR", logging.ERROR)
 
 
 def colorPicker(min,max,value):
-  values=[256,154,100]
+  values=[154,100,255]
+  schema=[[1,0,0],[1,1,0],[0,1,0],[0,1,1],[0,0,1],[1,0,1]]
+  kleuren=["#","#"]
   #bepaal welk kwintiel
   kwintiel=ceil(5*value/(max-min+1))
-  tussenwaarde=(value/(kwintiel*(max-min+1)/5))-1
-  startKleur=100
-  eindKleur=256
-  kleur=int(tussenwaarde*(eindKleur-startKleur))
-  print("kleurkiezer: {}: kwintiel: {} - {} : {}".format(value,kwintiel,tussenwaarde,kleur))
-
-  return ["#ff9a9a","#ff6464"]
+  tussenwaarde=5*(value)/(max-min+1)-kwintiel+1
+  for x in range(2):
+    for i in range(3):
+      startKleur = values[2] if (schema[kwintiel-1][i]) else values[x]
+      eindKleur = values[2] if (schema[kwintiel][i]) else values[x]
+      kleuren[x]+=hex(int(startKleur+tussenwaarde*(eindKleur-startKleur)))[2:]
+  #print("{} : {} , {} - {}".format(value,kwintiel,tussenwaarde,kleuren))
+  #kleuren=["#ffa9a9","#ff6464"]
+  return kleuren
 
 
 class MainApp(tk.Tk):
@@ -31,6 +35,9 @@ class MainApp(tk.Tk):
 
   def reset(self,nieuwKeuze):
    self.tafels.set(nieuwKeuze)
+
+  def analyse(self):
+    print("start analyse")
 
 
 class KeuzeFrame(tk.Frame):
@@ -66,15 +73,15 @@ class Tafels(list):
         self.rondenummers.append(tk.Label(self.frame,text="{}".format(x+1)))
         self.rondenummers[-1].grid(row=x+1,column=0)
       for x in range(int(numTafels)):
-         self.append(Tafel(self.frame,numTafels,x,rondes))
+         self.append(Tafel(self.frame,numTafels,x,rondes,self.parent.analyse))
 
 
 class Tafel(list):
-  def __init__(self,parent,numTafels,tafelNummer,rondes):
+  def __init__(self,parent,numTafels,tafelNummer,rondes,call_update):
     self.label=tk.Label(parent, text="Tafel {}".format(tafelNummer+1))
     self.label.grid(row=0,column=int(1+tafelNummer*4),padx=(25,0))
     for rondeNummer in range(rondes):
-      self.append(Ronde(parent,numTafels,tafelNummer,rondeNummer,self.update))
+      self.append(Ronde(parent,numTafels,tafelNummer,rondeNummer,call_update))
 
   def reset(self):
     for ronde in self:
@@ -82,8 +89,6 @@ class Tafel(list):
     self.clear()
     self.label.destroy()
 
-  def update(self):
-    print("update Tafel")
 
 class Ronde(list):
   def __init__(self,parent,numTafels,tafelNummer,rondeNummer,call_update):
@@ -104,11 +109,20 @@ class Ronde(list):
     self.optiesFrame.destroy()
 
   def update(self):
-    count=0
+    #check if round is full (4 players) and disable rest
+    chosen=0
     for optie in self.opties:
       if optie.active and optie.chosen:
-        count+=1
-    print("update ronde: {}".format(count))
+        chosen+=1
+    if (chosen>=4):
+      x=0
+      for optie in self.opties:
+        if not optie.chosen:
+          optie.disable()
+        else:
+          x+=1
+          optie.setFinal(x)
+    self.call_update()
 
 
 class Optie:
@@ -118,34 +132,37 @@ class Optie:
     self.call_update=call_update
     self.chosen=False
     self.active=True
-    self.total=numSpelers
     self.colors=colorPicker(1,numSpelers,value)
+    self.textsize='6' if (numSpelers>=7) else '9'
+    self.setCoords(numSpelers)
     self.build()
-    self.show()
 
   def build(self):
     if self.active:
-      textsize='6' if (self.total>=7) else '9'
       if self.chosen:
-        self.widget=tk.Label(self.parent,bg=self.colors[1],bd=1,font=('Helvetica', textsize),text="{}".format(self.value))
+        self.widget=tk.Label(self.parent,bg=self.colors[1],bd=1,font=('Helvetica', self.textsize),text="{}".format(self.value))
       else:
-        self.widget=tk.Button(self.parent,bg=self.colors[0],bd=1,font=('Helvetica', textsize),text="{}".format(self.value),command=self.kiesOptie)
+        self.widget=tk.Button(self.parent,bg=self.colors[0],bd=1,font=('Helvetica', self.textsize),text="{}".format(self.value),command=self.kiesOptie)
+      self.show()
 
   def reset(self):
     if self.active:
       self.widget.destroy()
 
-  def show(self):
-    yMax=int(self.total/4)+1 if (self.total<=12) else 4
-    xMax=int((self.total-self.total%yMax)/yMax)
+  def setCoords(self,total):
+    xMax=int((total-total%4)/4)
     x=int((self.value-1)%xMax)
     y=int((self.value-1)/xMax)
-    self.widget.grid(row=y,column=x,sticky='NESW')
+    self.coords=[x,y]
 
-  def setTotal(self, total):
-    self.total=total
+  def show(self):
+    self.widget.grid(row=self.coords[1],column=self.coords[0],sticky='NESW')
+
+  def setFinal(self, x):
+    self.textsize='11'
+    self.coords=[x,0]
     self.widget.destroy()
-    self.show()
+    self.build()
 
   def disable(self):
     self.active=False
@@ -156,7 +173,6 @@ class Optie:
     self.chosen=True
     self.widget.destroy()
     self.build()
-    self.show()
     self.call_update()
 
 
