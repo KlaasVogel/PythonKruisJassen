@@ -36,6 +36,9 @@ class MainApp(tk.Tk):
   def reset(self,nieuwKeuze):
    self.tafels.set(nieuwKeuze)
 
+  def analyse(self):
+    print("start analyse")
+
 
 class KeuzeFrame(tk.Frame):
   def __init__(self,parent,*args,**kwargs):
@@ -70,15 +73,15 @@ class Tafels(list):
         self.rondenummers.append(tk.Label(self.frame,text="{}".format(x+1)))
         self.rondenummers[-1].grid(row=x+1,column=0)
       for x in range(int(numTafels)):
-         self.append(Tafel(self.frame,numTafels,x,rondes))
+         self.append(Tafel(self.frame,numTafels,x,rondes,self.parent.analyse))
 
 
 class Tafel(list):
-  def __init__(self,parent,numTafels,tafelNummer,rondes):
+  def __init__(self,parent,numTafels,tafelNummer,rondes,call_update):
     self.label=tk.Label(parent, text="Tafel {}".format(tafelNummer+1))
     self.label.grid(row=0,column=int(1+tafelNummer*4),padx=(25,0))
     for rondeNummer in range(rondes):
-      self.append(Ronde(parent,numTafels,tafelNummer,rondeNummer,self.update))
+      self.append(Ronde(parent,numTafels,tafelNummer,rondeNummer,call_update))
 
   def reset(self):
     for ronde in self:
@@ -86,8 +89,6 @@ class Tafel(list):
     self.clear()
     self.label.destroy()
 
-  def update(self):
-    print("update Tafel")
 
 class Ronde(list):
   def __init__(self,parent,numTafels,tafelNummer,rondeNummer,call_update):
@@ -121,6 +122,7 @@ class Ronde(list):
         else:
           x+=1
           optie.setFinal(x)
+    self.call_update()
 
 
 class Optie:
@@ -131,8 +133,8 @@ class Optie:
     self.chosen=False
     self.active=True
     self.colors=colorPicker(1,numSpelers,value)
-    self.coords=self.getCoords(numSpelers)
     self.textsize='6' if (numSpelers>=7) else '9'
+    self.setCoords(numSpelers)
     self.build()
 
   def build(self):
@@ -147,11 +149,11 @@ class Optie:
     if self.active:
       self.widget.destroy()
 
-  def getCoords(self,total):
+  def setCoords(self,total):
     xMax=int((total-total%4)/4)
     x=int((self.value-1)%xMax)
     y=int((self.value-1)/xMax)
-    return [x,y]
+    self.coords=[x,y]
 
   def show(self):
     self.widget.grid(row=self.coords[1],column=self.coords[0],sticky='NESW')
