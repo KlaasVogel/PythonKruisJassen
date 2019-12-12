@@ -2,11 +2,25 @@ import tkinter as tk
 import sys
 import logging
 from logger import MyLogger
+from math import ceil
 
 # Replace stdout with logging to file at INFO level
 sys.stdout = MyLogger("SYSTEM_OUTPUT", logging.INFO)
 # Replace stderr with logging to file at ERROR level
 sys.stderr = MyLogger("SYSTEM_ERROR", logging.ERROR)
+
+
+def colorPicker(min,max,value):
+  values=[256,154,100]
+  #bepaal welk kwintiel
+  kwintiel=ceil(5*value/(max-min+1))
+  tussenwaarde=(value/(kwintiel*(max-min+1)/5))-1
+  startKleur=100
+  eindKleur=256
+  kleur=int(tussenwaarde*(eindKleur-startKleur))
+  print("kleurkiezer: {}: kwintiel: {} - {} : {}".format(value,kwintiel,tussenwaarde,kleur))
+
+  return ["#ff9a9a","#ff6464"]
 
 
 class MainApp(tk.Tk):
@@ -98,25 +112,28 @@ class Ronde(list):
 
 
 class Optie:
-  def __init__(self,parent,numTafels,value,call_update):
+  def __init__(self,parent,numSpelers,value,call_update):
     self.parent=parent
     self.value=value
     self.call_update=call_update
     self.chosen=False
     self.active=True
-    self.total=numTafels
-    self.max=numTafels #deze is nodig voor kleur?
+    self.total=numSpelers
+    self.colors=colorPicker(1,numSpelers,value)
     self.build()
     self.show()
 
   def build(self):
     if self.active:
       textsize='6' if (self.total>=7) else '9'
-      bg=
       if self.chosen:
-        self.widget=tk.Label(self.parent,bd=1,font=('Helvetica', textsize),text="{}".format(self.value))
+        self.widget=tk.Label(self.parent,bg=self.colors[1],bd=1,font=('Helvetica', textsize),text="{}".format(self.value))
       else:
-        self.widget=tk.Button(self.parent,bd=1,font=('Helvetica', textsize),text="{}".format(self.value),command=self.kiesOptie)
+        self.widget=tk.Button(self.parent,bg=self.colors[0],bd=1,font=('Helvetica', textsize),text="{}".format(self.value),command=self.kiesOptie)
+
+  def reset(self):
+    if self.active:
+      self.widget.destroy()
 
   def show(self):
     yMax=int(self.total/4)+1 if (self.total<=12) else 4
@@ -142,8 +159,6 @@ class Optie:
     self.show()
     self.call_update()
 
-  def colorPicker(self):
-    pass
 
 if __name__ == "__main__":
   app = MainApp()
