@@ -1,1 +1,2 @@
-call python "KruisKlaverenV0.01.py"
+call workon "kk_env"
+call python "KruisKlaverenV0.03.py"
