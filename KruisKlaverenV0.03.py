@@ -13,47 +13,59 @@ from math import ceil
 
 #create a new grid
 #input number of tables
-def createGrid(numTables:int):
+def createGrid(numTables:int) :
     global grid
     numPlayers=numTables*4
     numRounds=(numPlayers-1)//3
     if (numPlayers-1)%3 :
-        numRounds-=1
-    grid=np.zeros((numRounds,numPlayers),dtype=int)
+        numRounds-=2
+    grid=np.zeros((numRounds,numTables,4),dtype=int)
     print("players: {} , rounds: {}".format(numPlayers,numRounds))
 
 
-def possible(y,x,n):
+def possible(y,x,n) :
     global grid
-    numRounds,numPlayers=grid.shape
-    for i in range(numPlayers):
-        if grid[y][i] == n :
-            return False
-    x0=(x//4)*4
-    table=grid[y,x0:x0+4]
-    for i in range(numRounds):
-        for j in range(numPlayers//4):
-            test=grid[i,j*4:(j*4)+4]
-            if n in test:
-                if any((player and player in table for player in test)):
+    numRounds,numTables,dummy=grid.shape
+    numPlayers=numTables*4
+    #check if table isn't full:
+    if all(grid[y][x]) :
+        return False
+    #check if new player has highest number
+    if any(player>n for player in grid[y][x]):
+        return False
+    #check if player isn't  already playing in this round:
+    if any(n in table for table in grid[y]) :
+        return False
+    #check if combo exist in gird:
+    for round in grid :
+        for table in round :
+            if n in table:
+                if any(player in grid[y][x] for player in table) :
                     return False
     return True
 
-
 def solve():
     global grid
-    numRounds,numPlayers=grid.shape
+    numRounds,numTables,dummy=grid.shape
+    numPlayers=numTables*4
     for y in range(numRounds):
-        for x in range(numPlayers):
-            if grid[y][x] == 0 :
+        for x in range(numTables):
+            if not all(grid[y][x]):
                 for n in range(1,numPlayers+1) :
                     if possible(y, x, n) :
-                        grid[y][x] = n
-                        if not (x-3)%4:
-                            print(grid)
+                        #add player:
+                        for i,player in enumerate(grid[y][x]) :
+                            if not player:
+                                grid[y][x][i]=n
+                                break
                         solve()
-                        grid[y][x] = 0
+                        #reset
+                        for i,player in enumerate(grid[y][x]) :
+                            if player==n:
+                                grid[y][x][i]=0
                 return
+            if y==2:
+                print(grid)
     print(grid)
     input("more?")
 
