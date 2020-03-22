@@ -11,13 +11,48 @@ import os
 # Replace stderr with logging to file at ERROR level
 #sys.stderr = MyLogger("SYSTEM_ERROR", logging.ERROR)
 
+logger=MyLogger("LOG", logging.DEBUG)
+
+class Grid(np.ndarray):
+    def __new__(cls, input_array):
+        obj = np.asarray(input_array).view(cls)
+        return obj
+
+    def __init__(self,*args,**kwargs):
+        try:
+            self.numRounds,self.numTables,self.tableSize=self.shape
+            self.numPlayers=numTables*self.tableSize
+            self.blocks={}
+            numBlocks=self.numPlayers-(1+self.numRounds*3)
+            if numBlocks :
+                for n in range(1,self.numPlayers+1) :
+                    if numBlocks == 1 :
+                        self.blocks[n]=[(n+self.numPlayers//2-1)%self.numPlayers+1]
+                    else:
+                        self.blocks[n]=[(n+3)%self.numPlayers+1,(n+self.numPlayers-5)%self.numPlayers+1] #plus four and minus four
+        except Exception as e:
+            print('ERROR bij het maken van Grid')
+            print(e)
+            self.numRounds=0
+            self.numTables=0
+            self.tableSize=0
+            self.numPlayers=0
+        finally:
+            print('rounds: {}'.format(self.numRounds))
+            print('tables: {}'.format(self.numTables))
+            print('tablesize: {}'.format(self.tableSize))
+            print('players: {}'.format(self.numPlayers))
+
+    def __array_finalize__(self, obj):
+        if obj is None: return
+        self.info = getattr(obj, 'info', None)
+
 def cls():
     os.system('cls' if os.name=='nt' else 'clear')
 
 #create a new grid
 #input number of tables
 def createGrid(numTables:int) :
-    global grid
     numPlayers=numTables*4
     numRounds=(numPlayers-1)//3
     grid=np.zeros((numRounds,numTables,4),dtype=int)
@@ -26,79 +61,88 @@ def createGrid(numTables:int) :
     #get blocked
     numBlocks=numPlayers-(1+numRounds*3)
     blocked=(1+numPlayers//2-1)%numPlayers+1 if numBlocks==1 else 0
-    """
-    for i in range(1,5):
-        if i < numRounds :
-            for y in range(1,numRounds):
-                grid[y][i-1][0]=i
-    """
+
     for y in range(1,numRounds) :
         for x in range(numTables) :
             if x<4 :
                 grid[y][x][0]=x+1
-                if blocked and y==x:
-                    grid[y][x][2]=blocked
-            elif y>=4 :
-                grid[y][x][2]=blocked
+    return Grid(grid)
+
+#need to check if all combos are present / available
+combo_logger=MyLogger("Possibility Check", logging.DEBUG)
+def check_combo() :
+    global grid, combo_logger
 
 
+#check if player can be placed.
+pos_logger=MyLogger("Possibility Check", logging.INFO)
 def possible(y,x,n) :
-    global grid
-    numRounds,numTables,tableSize=grid.shape
-    numPlayers=numTables*tableSize
+    global grid,pos_logger
 
-    blocked=[]
-    numBlocks=numPlayers-(1+numRounds*3)
-    if numBlocks :
-        if numBlocks == 1 :
-            blocked=[(n+numPlayers//2-1)%numPlayers+1]
-        else:
-            blocked.append((n+3)%numPlayers+1) #plus four
-            blocked.append((n+numPlayers-5)%numPlayers+1) #minus four
     #check if table isn't full:
     if all(grid[y][x]) :
+        pos_logger.debug("table full")
         return False
-    #check if new player has highest number or blocked player in team
-    if any(player in blocked for player in grid[y][x]):
+    #check if new player is blocked by player in team
+    if any(player in grid.blocks[n] for player in grid[y][x]):
+        pos_logger.debug("player {} blocked by".format(n))
         return False
     #check if player isn't  already playing in this round:
     if any(n in table for table in grid[y]) :
+        pos_logger.debug('player {} is already playing this round'.format(n))
         return False
-    #check if combo exist in gird:
+    #check if combo exist in grid:
     for round in grid :
         for table in round :
             if n in table:
-                if any(player in grid[y][x] for player in table) :
+                if any(player and player is not n and player in grid[y][x] for player in table) :
+                    pos_logger.debug("player {} is already playing against player on table: {}-{}".format(n,y,x))
                     return False
     return True
 
 def solve():
-    global grid, count
+    global grid, count, logger
+    count+=1
+    if count == 1:
+        logger = MyLogger("SOLVE", logging.INFO)
+    logger.debug("START SOLVE: {}".format(count))
+    level=int(np.log10(count))
+    if level > 3 :
+        level=3
+    if not count%(10**level):
+        cls()
+        print("count: {} - level: {}".format(count,level))
+        print(grid)
     numRounds,numTables,tableSize=grid.shape
     numPlayers=numTables*tableSize
-    for y in range(1,numRounds) :
-        for n in range(1,numPlayers+1) :
+    for n in range(1,numPlayers+1) :
+        logger.debug("n: {}".format(n))
+        for y in range(1,numRounds) :
+            logger.debug('round: {}'.format(y))
             if not any(n in grid[y][x] for x in range(numTables)) :
+                logger.debug('empty round')
                 #player n is not placed this round:
                 for x in range(numTables) :
+                    logger.debug('table: {}'.format(x))
                     if possible(y, x, n) :
                         #add player:
                         for i,player in enumerate(grid[y][x]) :
                             if not player:
                                 grid[y][x][i]=n
-                                count+=1
-                                if not count%2000 or (y+3 > numRounds and not n%(numPlayers-1)) or n==numPlayers:
-                                    cls()
-                                    print(grid)
                                 break
-                        if not solve():
-                            #reset
+                        logger.debug('SOLVE NEXT LEVEL')
+                        if not solve() :
+                        #reset
+                            logger.debug("reset")
                             for i,player in enumerate(grid[y][x]) :
                                 if player==n:
                                     grid[y][x][i]=0
                         else:
+                            logger.debug('return True 1')
                             return True
+                logger.debug('return False 1')
                 return False
+    logger.debug('RETURN FINAL TRUE')
     return True
 
 
@@ -118,26 +162,14 @@ def colorPicker(min,max,value):
 
 
 numTables=5
-createGrid(numTables)
-count=0
-solve()
-print("whoooot!")
+grid=createGrid(numTables)
+print('test - numblocks {}'.format(grid.blocks))
 print(grid)
+count=0
 
 
-
-
-"""
-class MainApp(tk.Tk):
-  def __init__(self):
-    self.root = tk.Tk.__init__(self)
-    #self.keuzes=KeuzeFrame(self, side=tk.TOP)
-
-
-
-
-
-if __name__ == "__main__":
-  app = MainApp()
-  app.mainloop()
-"""
+if solve() :
+    print("whoooot!")
+    print(grid)
+else :
+    print("NO SOLUTION!")
