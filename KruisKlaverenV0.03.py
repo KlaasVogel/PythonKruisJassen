@@ -143,8 +143,6 @@ def solve():
         for y in range(1,numRounds) :
             logger.debug('round: {}'.format(y))
             if not any(n in grid[y][x] for x in range(numTables)) :
-                if not grid.scores[n]:
-                    grid.scores[n]=y
                 logger.debug('empty round')
                 #player n is not placed this round:
                 for x in range(numTables) :
