@@ -58,15 +58,15 @@ class KruisGrid(np.ndarray):
         try:
             self.logger={}
             for name in ["MAIN","POSSIBILITY","SOLVER","COMBO","OUTPUT"] :
-                self.logger[name]=MyLogger(name, logging.DEBUG)
+                self.logger[name]=MyLogger(name, logging.INFO)
             self.numRounds,self.numTables,self.tableSize=self.shape
             self.numPlayers=self.numTables*self.tableSize
             self.lowest=self.numPlayers
             self.blocks={}
             self.scores={}
-            self.save_states={}
             self.timers={}
             self.count=0
+            self.level=0
             self.start_time=0
             self.show_function=self.show_default
             numBlocks=self.numPlayers-(1+self.numRounds*3)
@@ -96,17 +96,15 @@ class KruisGrid(np.ndarray):
         if obj is None: return
         self.info = getattr(obj, 'info', None)
 
-    def add_grid(self,y,x,n):
+    def add_to_grid(self,y,x,n):
         logger=self.logger["MAIN"]
         logger.debug("ADDING {} to table: {} in round {}".format(n,x,y))
-        logger.debug("{}".format(self[y][x]))
         if n not in self[y][x]:
             for i,player in enumerate(self[y][x]) :
                 if not player:
                     self[y][x][i]=n
-                    return True
-            return False
-        return True
+                    self.scores[n][y][x]=2
+                    break
 
     def check_combos(self,m):
         logger=self.logger["COMBO"]
@@ -135,56 +133,59 @@ class KruisGrid(np.ndarray):
                 newscores=data["scores"]
                 for index in newscores:
                     self.scores[int(index)]=newscores[index]
-                self.load_states()
-
+                if len(self.scores):
+                    for n in self.scores:
+                        for i,round in enumerate(self.scores[n]):
+                            for j,x in enumerate(round):
+                                if x==2:
+                                    self.add_to_grid(i, j, n)
         except Exception as e:
             print('ERROR bij het laden van data')
             print(e)
 
-    def load_saves(self,n):
-        if n in self.save_states:
-            for i in self.save_states[n]:
-                j=self.save_states[n][i]
-                if not self.add_grid(i, j, n):
-                    return False
-            return self.save_states[n]
-        return False
-
-    def load_states(self):
-        for n in self.scores:
-            self.save_states[n]={}
-            for i,round in enumerate(self.scores[n]):
-                for j,x in enumerate(round):
-                    if x==2:
-                        self.save_states[n][i]=j
-
-    def next_state(self,n):
-        self.show(True)
+    def next_state(self):
         logger=self.logger["MAIN"]
-        logger.debug("NEXT STATE : {}".format(n))
-        logger.debug("{}".format(self.save_states[n]))
-        logger.debug(self.scores[n])
-        for round in range(self.numRounds-1,0,-1):
-            logger.debug(self.scores[n][round])
-            for i,score in enumerate(self.scores[n][round]):
-                if score==2:
-                    if i<self.numTables-1 and self.scores[n][round][i+1]:
-                        self.scores[n][round][i]=1
-                        self.scores[n][round][i+1]=2
-                        self.reset_grid(round, i, n)
-                        self.add_grid(round,i+1,n)
-                        logger.debug(self.scores[n])
-                        self.load_states()
-                    else:
-                        for j in range(self.numTables):
-                            self.scores[n][round][j]=0
-                            self.reset_grid(round, j, n)
-                    break
-            if any(self.scores[n][round]):
-                logger.debug('stop!')
-                break
+        found=False
+        n=self.numPlayers
+        while (not found and n>=1) :
+            logger.debug("NEXT STATE : {}".format(n))
+            logger.debug(self.scores[n])
+            y=self.numRounds
+            while (not found and y>0) :
+                y-=1
+                if np.any(np.isin(self.scores[n][y],2)) :
+                    x=0
+                    while(not found and x<self.numTables) :
+                        if self.scores[n][y][x]==2:
+                            self.remove_from_grid(y,x,n)
+                            if x+1 < self.numTables :
+                                if self.scores[n][y][x+1] and self.possible(y,x+1,n) :
+                                    self.add_to_grid(y, x+1, n)
+                                    found=True
+                            else :
+                                self.reset_round(y,n)
+                        x+=1
+                else:
+                    self.reset_round(y, n)
+            if found :
+                logger.debug("new scores: {} - {}".format(n, self.scores[n]))
+                self.solve(n)
+            else:
+                for y in range(self.numRounds):
+                    self.reset_round(y, n)
+                n-=1
         self.show(True)
-        self.solve()
+        print("END of states")
+
+    def reset_round(self,y,n):
+        logger=self.logger["MAIN"]
+        logger.debug(np.any(self.scores[n][y]))
+        if np.any(self.scores[n][y]) :
+            for x in range(self.numTables):
+                self.remove_from_grid(y, x, n)
+                self.scores[n][y][x]=0
+        else:
+            logger.debug("round {} is already empty for {}".format(y,n))
 
     def possible(self,y,x,n) :
         logger=self.logger["POSSIBILITY"]
@@ -239,12 +240,14 @@ class KruisGrid(np.ndarray):
                     self[y][x][count]=0
                     count+=1
 
-    def reset_grid(self,y,x,n):
+    def remove_from_grid(self,y,x,n):
         logger=self.logger["MAIN"]
         logger.debug("Removing {} from {}-{}".format(n,y,x))
         for i,player in enumerate(self[y][x]) :
             if player==n:
                 self[y][x][i]=0
+                self.scores[n][y][x]=1
+                break
 
     def resetScores(self,trigger):
         if trigger<=self.numPlayers:
@@ -294,7 +297,6 @@ class KruisGrid(np.ndarray):
         self.show()
         for n in range(value,self.numPlayers+1):
             logger.debug("n: {}".format(n))
-            states=self.load_saves(n)
             n_mask1=np.any(np.isin(self,n),axis=2)
             n_mask2=np.any(n_mask1,axis=1)
             logger.debug("mask:\n {} - {}".format(n_mask1,n_mask2))
@@ -312,33 +314,28 @@ class KruisGrid(np.ndarray):
                         if not (x and (self[y][x]==self[y][x-1]).all()):
                             logger.debug("table is unique!")
                             if self.possible(y, x, n) :
-                                self.scores[n][y][x]=2
                                 for i in range(x+1,self.numTables):
                                     self.scores[n][y][i] = 0 if (self[y][i]==self[y][i-1]).all() else 1
-                                self.add_grid(y, x, n)
+                                self.add_to_grid(y, x, n)
+                                self.level+=1
                                 self.timers[n]=time.time()*1000
                                 logger.debug('SOLVE NEXT LEVEL')
                                 if not (self.check_combos(n) and self.solve(n)):
                                     #reset
                                     logger.debug(" ---- RESET -------")
-                                    self.reset_grid(y,x,n)
-                                    self.scores[n][y][x]=1
+                                    self.remove_from_grid(y,x,n)
                                     self.resetScores(n+1)
+                                    self.level-=1
+                                    if not self.level:
+                                        self.show(True)
+                                        logger.debug('----End of Line -----')
+                                        self.next_state()
                                 else:
                                     logger.debug('return True 1')
                                     return True
                         else:
-                            logger.info("SKIPPING table {} for {}".format(x,n))
+                            logger.debug("SKIPPING table {} for {}".format(x,n))
                     logger.debug("End of Tables: n:{} - y:{} - x:{} ".format(n,y,x))
-                    logger.debug("lowest: {}".format(self.lowest))
-                    if n==self.lowest:
-                        logger.debug("states: {}".format(self.save_states))
-                        if not y:
-                            self.next_state(n-1)
-                        elif y not in self.save_states[n]:
-                            self.next_state(n)
-                    #if not y and x==self.numTables-1 and n-1 in self.save_states and len(self.save_states[n-1]):
-                    #self.next_state(n-1)
                 else:
                     logger.debug("SKIPPING round {} for {}".format(y,n))
                 logger.debug('return False 1')
@@ -366,7 +363,6 @@ def colorPicker(min,max,value):
 grid=KruisGrid(5)
 grid.show()
 print(grid.scores)
-print(grid.save_states)
 
 if grid.solve(6):
     print('whoot!')
