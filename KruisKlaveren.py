@@ -259,7 +259,7 @@ class KruisGrid(np.ndarray):
                         self.scores[i][j].append(0)
 
     def save_data(self):
-        savefile="data_{}_{}a.json".format(self.numTables,self.tableSize)
+        savefile="data_{}_{}.json".format(self.numTables,self.tableSize)
         print(savefile)
         data={}
         data["count"]=self.count
