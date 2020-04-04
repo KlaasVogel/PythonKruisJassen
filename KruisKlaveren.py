@@ -3,6 +3,7 @@ import logging
 from logger import MyLogger
 import os
 import time
+from threading import Thread
 import json
 
 #Replace stdout with logging to file at INFO level
@@ -68,6 +69,7 @@ class KruisGrid(np.ndarray):
             self.count=0
             self.level=0
             self.start_time=0
+            self.running=False
             self.show_function=self.show_default
             numBlocks=self.numPlayers-(1+self.numRounds*3)
             if numBlocks :
@@ -260,7 +262,7 @@ class KruisGrid(np.ndarray):
 
     def save_data(self):
         savefile="data_{}_{}.json".format(self.numTables,self.tableSize)
-        print(savefile)
+        #print(savefile)
         data={}
         data["count"]=self.count
         data["runtime"]=time.time()*1000-self.start_time
@@ -291,10 +293,10 @@ class KruisGrid(np.ndarray):
         if not self.start_time :
             self.start_time=time.time()*1000
         self.count+=1
-        if not self.count%10000:
+        if self.running and not self.count%10000:
             self.save_data()
         logger.debug("START SOLVE: {}".format(self.count))
-        self.show()
+        #self.show()
         for n in range(value,self.numPlayers+1):
             logger.debug("n: {}".format(n))
             n_mask1=np.any(np.isin(self,n),axis=2)
@@ -320,7 +322,7 @@ class KruisGrid(np.ndarray):
                                 self.level+=1
                                 self.timers[n]=time.time()*1000
                                 logger.debug('SOLVE NEXT LEVEL')
-                                if not (self.check_combos(n) and self.solve(n)):
+                                if self.running and not (self.check_combos(n) and self.solve(n)):
                                     #reset
                                     logger.debug(" ---- RESET -------")
                                     self.remove_from_grid(y,x,n)
@@ -346,24 +348,18 @@ class KruisGrid(np.ndarray):
         logger.debug('RETURN FINAL TRUE')
         return True
 
-#function to create nice gradient of colors for players
-def colorPicker(min,max,value):
-  values=[154,100,255]
-  schema=[[1,0,0],[1,1,0],[0,1,0],[0,1,1],[0,0,1],[1,0,1]]
-  kleuren=["#","#"]
-  kwintiel=ceil(5*value/(max-min+1))
-  tussenwaarde=5*(value)/(max-min+1)-kwintiel+1
-  for x in range(2):
-    for i in range(3):
-      startKleur = values[2] if (schema[kwintiel-1][i]) else values[x]
-      eindKleur = values[2] if (schema[kwintiel][i]) else values[x]
-      kleuren[x]+=hex(int(startKleur+tussenwaarde*(eindKleur-startKleur)))[2:]
-  return kleuren
+    def start(self):
+        self.running=True
+        Thread(target=self.solve,args=(6,),daemon=True).start()
 
-grid=KruisGrid(5)
-grid.show()
-print(grid.scores)
+    def stop(self):
+        self.running=False
 
-if grid.solve(6):
-    print('whoot!')
-print('end')
+if __name__ == "__main__":
+    grid=KruisGrid(5)
+    grid.show()
+    grid.start()
+    for x in range(8):
+        time.sleep(5)
+        grid.show(True)
+    grid.stop()
