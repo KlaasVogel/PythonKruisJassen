@@ -67,9 +67,12 @@ class KruisGrid(np.ndarray):
             self.scores={}
             self.timers={}
             self.count=0
+            self.lastcount=0
+            self.lasttime=0
             self.level=0
             self.start_time=0
             self.running=False
+            self.done=False
             self.show_function=self.show_default
             numBlocks=self.numPlayers-(1+self.numRounds*3)
             if numBlocks :
@@ -126,12 +129,13 @@ class KruisGrid(np.ndarray):
     def load_data(self):
         try:
             savefile="data_{}_{}.json".format(self.numTables,self.tableSize)
-            print(savefile)
             if os.path.isfile(savefile):
                 with open(savefile) as json_file:
                     data = json.load(json_file)
                 self.count=data["count"]
+                self.lastcount=self.count
                 self.start_time=time.time()*1000-data["runtime"]
+                self.lasttime=self.start_time
                 newscores=data["scores"]
                 for index in newscores:
                     self.scores[int(index)]=newscores[index]
@@ -176,7 +180,7 @@ class KruisGrid(np.ndarray):
                 for y in range(self.numRounds):
                     self.reset_round(y, n)
                 n-=1
-        self.show(True)
+        #self.show(True)
         print("END of states")
 
     def reset_round(self,y,n):
@@ -209,7 +213,7 @@ class KruisGrid(np.ndarray):
                     return False
         return True
 
-    def procent(self):
+    def progress(self):
         logger=self.logger["OUTPUT"]
         total=0
         logger.debug(self.scores)
@@ -225,9 +229,14 @@ class KruisGrid(np.ndarray):
                             i+=1
                     denominator=denominator*i
                     total=total+nominator/denominator
-        elaps_time=time.time()*1000-self.start_time
-        estimate_time=int((100-total)*elaps_time//total if total else 1000000)
-        return [total, elaps_time, estimate_time]
+        now=time.time()*1000
+        elaps_time=now-self.lasttime
+        self.lasttime=now
+        delta_count=self.count-self.lastcount
+        self.lastcount=self.count
+        speed=delta_count*1000/elaps_time if elaps_time else 0
+        estimate_time=int(1000*(100-total)*self.count//(speed*total)) if (speed and total) else 1000000
+        return [self.count, "{:.5f} %".format(total),int(speed),print_time(estimate_time)]
 
     def reorder(self):
         for y in range(self.numRounds) :
@@ -272,13 +281,13 @@ class KruisGrid(np.ndarray):
 
     def show_default(self, count, process, grid):
         cls()
-        print("self.count: {}".format(count))
-        print("{} %".format(process[0]))
-        print("Time running: {} --- time remaining: {} ".format(print_time(process[1]),print_time(process[2])))
+        print("self.count: {} calculations".format(count))
+        print(process[0])
+        print("Speed: {} calculations/second  --- time remaining: {} ".format(process[1],process[2]))
         self.reorder()
         print(grid)
-        for n in self.timers:
-            print("{} : {}".format(n,print_time(time.time()*1000-self.timers[n])))
+        #for n in self.timers:
+            #print("{} : {}".format(n,print_time(time.time()*1000-self.timers[n])))
 
     def show(self, force=False):
         level=int(np.log10(self.count)) if self.count else 0
@@ -286,7 +295,7 @@ class KruisGrid(np.ndarray):
         if level > maxlevel :
             level=maxlevel
         if force or not self.count%(10**level):
-            self.show_function(self.count,self.procent(),self)
+            self.show_function(self.count,self.progress(),self)
 
     def solve(self,value=1):
         logger=self.logger["MAIN"]
@@ -303,8 +312,6 @@ class KruisGrid(np.ndarray):
             n_mask2=np.any(n_mask1,axis=1)
             logger.debug("mask:\n {} - {}".format(n_mask1,n_mask2))
             if not np.all(n_mask2) :
-                if n<self.lowest:
-                    self.lowest=n
                 y=np.where(n_mask2==False)[0][0]
                 logger.debug("checking round: {}".format(y))
                 #check if round isn't the same as previous round
@@ -329,7 +336,7 @@ class KruisGrid(np.ndarray):
                                     self.resetScores(n+1)
                                     self.level-=1
                                     if not self.level:
-                                        self.show(True)
+                                        #self.show(True)
                                         logger.debug('----End of Line -----')
                                         self.next_state()
                                 else:
@@ -344,9 +351,15 @@ class KruisGrid(np.ndarray):
                 return False
             else:
                 logger.debug("{} is done!".format(n))
-        self.show(True)
+        self.save_data()
+        self.done=True
         logger.debug('RETURN FINAL TRUE')
         return True
+
+    def restart(self):
+        self.resetScores(self.tableSize+2)
+        self.load_data()
+        self.start()
 
     def start(self):
         self.running=True
@@ -354,6 +367,10 @@ class KruisGrid(np.ndarray):
 
     def stop(self):
         self.running=False
+
+    def getall(self):
+        return self
+
 
 if __name__ == "__main__":
     grid=KruisGrid(5)
