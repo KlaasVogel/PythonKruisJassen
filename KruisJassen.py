@@ -3,12 +3,9 @@ import logging
 from logger import MyLogger
 import os
 import time
+from threading import Thread
 import json
 
-#Replace stdout with logging to file at INFO level
-#sys.stdout = MyLogger("SYSTEM_OUTPUT", logging.INFO)
-# Replace stderr with logging to file at ERROR level
-#sys.stderr = MyLogger("SYSTEM_ERROR", logging.ERROR)
 
 def cls():
     os.system('cls' if os.name=='nt' else 'clear')
@@ -66,8 +63,12 @@ class KruisGrid(np.ndarray):
             self.scores={}
             self.timers={}
             self.count=0
+            self.lastcount=0
+            self.lasttime=0
             self.level=0
             self.start_time=0
+            self.running=False
+            self.done=False
             self.show_function=self.show_default
             numBlocks=self.numPlayers-(1+self.numRounds*3)
             if numBlocks :
@@ -124,12 +125,13 @@ class KruisGrid(np.ndarray):
     def load_data(self):
         try:
             savefile="data_{}_{}.json".format(self.numTables,self.tableSize)
-            print(savefile)
             if os.path.isfile(savefile):
                 with open(savefile) as json_file:
                     data = json.load(json_file)
                 self.count=data["count"]
+                self.lastcount=self.count
                 self.start_time=time.time()*1000-data["runtime"]
+                self.lasttime=self.start_time
                 newscores=data["scores"]
                 for index in newscores:
                     self.scores[int(index)]=newscores[index]
@@ -174,8 +176,6 @@ class KruisGrid(np.ndarray):
                 for y in range(self.numRounds):
                     self.reset_round(y, n)
                 n-=1
-        self.show(True)
-        print("END of states")
 
     def reset_round(self,y,n):
         logger=self.logger["MAIN"]
@@ -207,7 +207,7 @@ class KruisGrid(np.ndarray):
                     return False
         return True
 
-    def procent(self):
+    def progress(self):
         logger=self.logger["OUTPUT"]
         total=0
         logger.debug(self.scores)
@@ -223,9 +223,14 @@ class KruisGrid(np.ndarray):
                             i+=1
                     denominator=denominator*i
                     total=total+nominator/denominator
-        elaps_time=time.time()*1000-self.start_time
-        estimate_time=int((100-total)*elaps_time//total if total else 1000000)
-        return [total, elaps_time, estimate_time]
+        now=time.time()*1000
+        elaps_time=now-self.lasttime
+        self.lasttime=now
+        delta_count=self.count-self.lastcount
+        self.lastcount=self.count
+        speed=delta_count*1000/elaps_time if elaps_time else 0
+        estimate_time=int(1000*(100-total)*self.count//(speed*total)) if (speed and total) else 1000000
+        return [self.count, "{:.5f} %".format(total),int(speed),print_time(estimate_time)]
 
     def reorder(self):
         for y in range(self.numRounds) :
@@ -260,7 +265,6 @@ class KruisGrid(np.ndarray):
 
     def save_data(self):
         savefile="data_{}_{}.json".format(self.numTables,self.tableSize)
-        print(savefile)
         data={}
         data["count"]=self.count
         data["runtime"]=time.time()*1000-self.start_time
@@ -270,13 +274,12 @@ class KruisGrid(np.ndarray):
 
     def show_default(self, count, process, grid):
         cls()
-        print("self.count: {}".format(count))
-        print("{} %".format(process[0]))
-        print("Time running: {} --- time remaining: {} ".format(print_time(process[1]),print_time(process[2])))
+        print("self.count: {} calculations".format(procent[0]))
+        print("Speed: {} calculations/second  --- time remaining: {} ".format(process[1],process[2]))
         self.reorder()
         print(grid)
-        for n in self.timers:
-            print("{} : {}".format(n,print_time(time.time()*1000-self.timers[n])))
+        #for n in self.timers:
+            #print("{} : {}".format(n,print_time(time.time()*1000-self.timers[n])))
 
     def show(self, force=False):
         level=int(np.log10(self.count)) if self.count else 0
@@ -284,25 +287,23 @@ class KruisGrid(np.ndarray):
         if level > maxlevel :
             level=maxlevel
         if force or not self.count%(10**level):
-            self.show_function(self.count,self.procent(),self)
+            self.show_function(self.count,self.progress(),self)
 
     def solve(self,value=1):
         logger=self.logger["MAIN"]
         if not self.start_time :
             self.start_time=time.time()*1000
         self.count+=1
-        if not self.count%10000:
+        if self.running and not self.count%10000:
             self.save_data()
         logger.debug("START SOLVE: {}".format(self.count))
-        self.show()
+        #self.show()
         for n in range(value,self.numPlayers+1):
             logger.debug("n: {}".format(n))
             n_mask1=np.any(np.isin(self,n),axis=2)
             n_mask2=np.any(n_mask1,axis=1)
             logger.debug("mask:\n {} - {}".format(n_mask1,n_mask2))
             if not np.all(n_mask2) :
-                if n<self.lowest:
-                    self.lowest=n
                 y=np.where(n_mask2==False)[0][0]
                 logger.debug("checking round: {}".format(y))
                 #check if round isn't the same as previous round
@@ -320,14 +321,14 @@ class KruisGrid(np.ndarray):
                                 self.level+=1
                                 self.timers[n]=time.time()*1000
                                 logger.debug('SOLVE NEXT LEVEL')
-                                if not (self.check_combos(n) and self.solve(n)):
+                                if self.running and not (self.check_combos(n) and self.solve(n)):
                                     #reset
                                     logger.debug(" ---- RESET -------")
                                     self.remove_from_grid(y,x,n)
                                     self.resetScores(n+1)
                                     self.level-=1
                                     if not self.level:
-                                        self.show(True)
+                                        #self.show(True)
                                         logger.debug('----End of Line -----')
                                         self.next_state()
                                 else:
@@ -342,28 +343,32 @@ class KruisGrid(np.ndarray):
                 return False
             else:
                 logger.debug("{} is done!".format(n))
-        self.show(True)
+        self.save_data()
+        self.done=True
         logger.debug('RETURN FINAL TRUE')
         return True
 
-#function to create nice gradient of colors for players
-def colorPicker(min,max,value):
-  values=[154,100,255]
-  schema=[[1,0,0],[1,1,0],[0,1,0],[0,1,1],[0,0,1],[1,0,1]]
-  kleuren=["#","#"]
-  kwintiel=ceil(5*value/(max-min+1))
-  tussenwaarde=5*(value)/(max-min+1)-kwintiel+1
-  for x in range(2):
-    for i in range(3):
-      startKleur = values[2] if (schema[kwintiel-1][i]) else values[x]
-      eindKleur = values[2] if (schema[kwintiel][i]) else values[x]
-      kleuren[x]+=hex(int(startKleur+tussenwaarde*(eindKleur-startKleur)))[2:]
-  return kleuren
+    def restart(self):
+        self.resetScores(self.tableSize+2)
+        self.load_data()
+        self.start()
 
-grid=KruisGrid(5)
-grid.show()
-print(grid.scores)
+    def start(self):
+        self.running=True
+        Thread(target=self.solve,args=(6,),daemon=True).start()
 
-if grid.solve(6):
-    print('whoot!')
-print('end')
+    def stop(self):
+        self.running=False
+
+    def getall(self):
+        return self
+
+
+if __name__ == "__main__":
+    grid=KruisGrid(5)
+    grid.show()
+    grid.start()
+    for x in range(10):
+        time.sleep(1)
+        grid.show(True)
+    grid.stop()
