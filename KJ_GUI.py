@@ -1,5 +1,5 @@
 import tkinter as tk
-from KruisKlaveren import KruisGrid
+from KruisJassen import KruisGrid
 from math import ceil
 
 grid=[]
@@ -71,10 +71,10 @@ class MainFrame(tk.Frame):
         #frames inside of progressframe
         self.startbutton=tk.Button(progressFrame, text="START",bg='dark sea green',height='3',width='6',command=self.start,state=tk.DISABLED)
         self.startbutton.config(activebackground='green2')
-        self.startbutton.grid(row=0,column=0,rowspan=3)
+        self.startbutton.grid(row=0,column=0,rowspan=3,padx=5)
         self.stopbutton=tk.Button(progressFrame, text="STOP",height='3',width='6',command=self.stop,state=tk.DISABLED)
         self.stopbutton.config(activebackground='red2')
-        self.stopbutton.grid(row=0, column=4, rowspan=3)
+        self.stopbutton.grid(row=0, column=4, rowspan=3,padx=5)
         self.progresslabels={}
         self.tablelabels=[]
         self.rounds=[]
@@ -84,8 +84,7 @@ class MainFrame(tk.Frame):
         self.progresslabels["title"].append(tk.Label(titleFrame,text="\"Kruisjassen\" Table Arranger:"))
         self.progresslabels["title"].append(tk.Label(titleFrame,text=".."))
         self.progresslabels["title"].append(tk.Label(titleFrame,text="Tables  -"))
-        self.progresslabels["title"].append(tk.Label(titleFrame,text=".."))
-        self.progresslabels["title"].append(tk.Label(titleFrame,text="Rounds"))
+        self.progresslabels["title"].append(tk.Label(titleFrame,textvariable=self.percent))
         stateFrame=tk.Frame(progressFrame)
         stateFrame.grid(row=1,column=1)
         self.progresslabels["state"]=[]
@@ -101,14 +100,9 @@ class MainFrame(tk.Frame):
         self.progresslabels["speed"]=[]
         self.progresslabels["speed"].append(tk.Label(speedFrame,text="Speed:"))
         self.progresslabels["speed"].append(tk.Label(speedFrame,textvariable=self.speed))
-        self.progresslabels["speed"].append(tk.Label(speedFrame,text="steps/minute"))
-        procentFrame=tk.Frame(progressFrame)
-        procentFrame.grid(row=2,column=1)
-        self.progresslabels["procent"]=[]
-        self.progresslabels["procent"].append(tk.Label(procentFrame,text="Progress:"))
-        self.progresslabels["procent"].append(tk.Label(procentFrame,textvariable=self.percent))
+        self.progresslabels["speed"].append(tk.Label(speedFrame,text="steps/second"))
         timeFrame=tk.Frame(progressFrame)
-        timeFrame.grid(row=3,column=0,columnspan=5)
+        timeFrame.grid(row=2,column=1,columnspan=3)
         self.progresslabels["time"]=[]
         self.progresslabels["time"].append(tk.Label(timeFrame,text="Time Remaining:"))
         self.progresslabels["time"].append(tk.Label(timeFrame,textvariable=self.time))
@@ -154,7 +148,6 @@ class MainFrame(tk.Frame):
         self.running=False
         self.grid=KruisGrid(numTables)
         self.progresslabels["title"][1].config(text=self.grid.numTables)
-        self.progresslabels["title"][3].config(text=self.grid.numRounds)
         self.startbutton.config(state=tk.NORMAL,bg='pale green',relief=tk.RAISED)
         self.stopbutton.config(state=tk.DISABLED,bg='LightPink3',relief=tk.SUNKEN)
         self.build()

@@ -6,10 +6,6 @@ import time
 from threading import Thread
 import json
 
-#Replace stdout with logging to file at INFO level
-#sys.stdout = MyLogger("SYSTEM_OUTPUT", logging.INFO)
-# Replace stderr with logging to file at ERROR level
-#sys.stderr = MyLogger("SYSTEM_ERROR", logging.ERROR)
 
 def cls():
     os.system('cls' if os.name=='nt' else 'clear')
@@ -180,8 +176,6 @@ class KruisGrid(np.ndarray):
                 for y in range(self.numRounds):
                     self.reset_round(y, n)
                 n-=1
-        #self.show(True)
-        print("END of states")
 
     def reset_round(self,y,n):
         logger=self.logger["MAIN"]
@@ -271,7 +265,6 @@ class KruisGrid(np.ndarray):
 
     def save_data(self):
         savefile="data_{}_{}.json".format(self.numTables,self.tableSize)
-        #print(savefile)
         data={}
         data["count"]=self.count
         data["runtime"]=time.time()*1000-self.start_time
@@ -281,8 +274,7 @@ class KruisGrid(np.ndarray):
 
     def show_default(self, count, process, grid):
         cls()
-        print("self.count: {} calculations".format(count))
-        print(process[0])
+        print("self.count: {} calculations".format(procent[0]))
         print("Speed: {} calculations/second  --- time remaining: {} ".format(process[1],process[2]))
         self.reorder()
         print(grid)
@@ -376,7 +368,7 @@ if __name__ == "__main__":
     grid=KruisGrid(5)
     grid.show()
     grid.start()
-    for x in range(8):
-        time.sleep(5)
+    for x in range(10):
+        time.sleep(1)
         grid.show(True)
     grid.stop()
