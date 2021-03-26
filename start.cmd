@@ -1,1 +1,2 @@
-call workon "kk_env" && python "KJ_GUI.py"
+call venv\Scripts\activate.bat
+call python "KJ_GUI.py"

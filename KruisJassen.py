@@ -56,9 +56,12 @@ class KruisGrid(np.ndarray):
             self.logger={}
             for name in ["MAIN","POSSIBILITY","SOLVER","COMBO","OUTPUT"] :
                 self.logger[name]=MyLogger(name, logging.INFO)
-            self.numRounds,self.numTables,self.tableSize=self.shape
-            self.numPlayers=self.numTables*self.tableSize
-            self.lowest=self.numPlayers
+            self._numRounds,self._numTables,self._tableSize=self.shape
+            self._numPlayers=self._numTables*self._tableSize
+            self.lowest=self._numPlayers
+
+
+
             self.blocks={}
             self.scores={}
             self.timers={}
@@ -365,7 +368,7 @@ class KruisGrid(np.ndarray):
 
 
 if __name__ == "__main__":
-    grid=KruisGrid(5)
+    grid=KruisGrid(3,3)
     grid.show()
     grid.start()
     for x in range(10):
