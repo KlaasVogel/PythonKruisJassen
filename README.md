@@ -1,21 +1,32 @@
 # PythonKruisJassen
-Generator for creating groups of 4 people where no one  plays another player more than once
+Generator for creating groups of 4 people where no one plays another player more than once
 
-# needed python modules:
-numpy
-
-First attempt was to slow and no sollutions could be found for 5 tables. Old code still available in the folder V1
+First attempts were to slow (one attempt to find a solution took more than 3 days for 5 poules) and no solutions could be found for 5 poules per round. Old code still available in the folder V0.1
 trying to switch to a new way of solving this problem:
-- wave form collapse with back tracing
+- waveform collapse with backtracing
+
+# V0.2.0.1:
+total restart of building up code:
+(new) features:
+- list of players
+* each player tracks already coupled/blocked players
+
+- poule
+* list of player(nrs) who will play against eachother
+* list of candidates, player(nrs) who can still participate in this poule (not blocked by players already in this poule)
+
+- playround
+* list of poules
+
+- schedule
+* list of playrounds
+* added function to fill first round
+
+- main functions
+* add new player to a poule
+
+
+    
 
 
 
-
-V1 - slow and seems not to work for 5 tables (20 players)
-    KJ_GUI is a GUI to view start/stop the "calculations"
-    a grid (KruisGrid) is made and solved in KruisJassen.py
-    logger.py is used to log info (for debugging)
-
-    data is saved (after each 10k of steps done) in a json file: for resuming later.
-
-    To start simply start KJ_GUI.py
