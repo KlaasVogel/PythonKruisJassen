@@ -6,7 +6,6 @@ import time
 from threading import Thread
 import json
 
-
 def cls():
     os.system('cls' if os.name=='nt' else 'clear')
 
@@ -39,7 +38,7 @@ class KruisGrid(np.ndarray):
 
         #fill first round, only table 1:
         grid[0][0]=range(1,tableSize+1)
-        grid[0][1][0]=tableSize+1
+        #grid[0][1][0]=tableSize+1
 
         for y in range(1,numRounds) :
             for x in range(0,numTables) :
@@ -56,9 +55,12 @@ class KruisGrid(np.ndarray):
             self.logger={}
             for name in ["MAIN","POSSIBILITY","SOLVER","COMBO","OUTPUT"] :
                 self.logger[name]=MyLogger(name, logging.INFO)
-            self.numRounds,self.numTables,self.tableSize=self.shape
-            self.numPlayers=self.numTables*self.tableSize
-            self.lowest=self.numPlayers
+            self._numRounds,self._numTables,self._tableSize=self.shape
+            self._numPlayers=self._numTables*self._tableSize
+            self.lowest=self._numPlayers
+
+
+
             self.blocks={}
             self.scores={}
             self.timers={}
@@ -70,28 +72,28 @@ class KruisGrid(np.ndarray):
             self.running=False
             self.done=False
             self.show_function=self.show_default
-            numBlocks=self.numPlayers-(1+self.numRounds*3)
+            numBlocks=self._numPlayers-(1+self._numRounds*3)
             if numBlocks :
-                for n in range(1,self.numPlayers+1) :
+                for n in range(1,self._numPlayers+1) :
                     if numBlocks == 1 :
-                        blocked_player = (n+self.numPlayers//2-1)%self.numPlayers+1
+                        blocked_player = (n+self._numPlayers//2-1)%self._numPlayers+1
                         self.blocks[n] = [blocked_player]
                     else:
-                        self.blocks[n]=[(n+3)%self.numPlayers+1,(n+self.numPlayers-5)%self.numPlayers+1] #plus four and minus four
-            self.resetScores(self.tableSize+2)
+                        self.blocks[n]=[(n+3)%self._numPlayers+1,(n+self._numPlayers-5)%self._numPlayers+1] #plus four and minus four
+            self.resetScores(self._tableSize+2)
             self.load_data()
         except Exception as e:
             print('ERROR bij het maken van Grid')
             print(e)
-            self.numRounds=0
-            self.numTables=0
-            self.tableSize=0
-            self.numPlayers=0
+            self._numRounds=0
+            self._numTables=0
+            self._tableSize=0
+            self._numPlayers=0
         finally:
-            print('rounds: {}'.format(self.numRounds))
-            print('tables: {}'.format(self.numTables))
-            print('tablesize: {}'.format(self.tableSize))
-            print('players: {}'.format(self.numPlayers))
+            print('rounds: {}'.format(self._numRounds))
+            print('tables: {}'.format(self._numTables))
+            print('tablesize: {}'.format(self._tableSize))
+            print('players: {}'.format(self._numPlayers))
 
     def __array_finalize__(self, obj):
         if obj is None: return
@@ -124,7 +126,7 @@ class KruisGrid(np.ndarray):
 
     def load_data(self):
         try:
-            savefile="data_{}_{}.json".format(self.numTables,self.tableSize)
+            savefile="data_{}_{}.json".format(self._numTables,self._tableSize)
             if os.path.isfile(savefile):
                 with open(savefile) as json_file:
                     data = json.load(json_file)
@@ -148,19 +150,19 @@ class KruisGrid(np.ndarray):
     def next_state(self):
         logger=self.logger["MAIN"]
         found=False
-        n=self.numPlayers
+        n=self._numPlayers
         while (not found and n>=1) :
             logger.debug("NEXT STATE : {}".format(n))
             logger.debug(self.scores[n])
-            y=self.numRounds
+            y=self._numRounds
             while (not found and y>0) :
                 y-=1
                 if np.any(np.isin(self.scores[n][y],2)) :
                     x=0
-                    while(not found and x<self.numTables) :
+                    while(not found and x<self._numTables) :
                         if self.scores[n][y][x]==2:
                             self.remove_from_grid(y,x,n)
-                            if x+1 < self.numTables :
+                            if x+1 < self._numTables :
                                 if self.scores[n][y][x+1] and self.possible(y,x+1,n) :
                                     self.add_to_grid(y, x+1, n)
                                     found=True
@@ -173,7 +175,7 @@ class KruisGrid(np.ndarray):
                 logger.debug("new scores: {} - {}".format(n, self.scores[n]))
                 self.solve(n)
             else:
-                for y in range(self.numRounds):
+                for y in range(self._numRounds):
                     self.reset_round(y, n)
                 n-=1
 
@@ -181,7 +183,7 @@ class KruisGrid(np.ndarray):
         logger=self.logger["MAIN"]
         logger.debug(np.any(self.scores[n][y]))
         if np.any(self.scores[n][y]) :
-            for x in range(self.numTables):
+            for x in range(self._numTables):
                 self.remove_from_grid(y, x, n)
                 self.scores[n][y][x]=0
         else:
@@ -233,15 +235,15 @@ class KruisGrid(np.ndarray):
         return [self.count, "{:.5f} %".format(total),int(speed),print_time(estimate_time)]
 
     def reorder(self):
-        for y in range(self.numRounds) :
-            for x in range(self.numTables) :
+        for y in range(self._numRounds) :
+            for x in range(self._numTables) :
                 self[y][x].sort()
                 count=0
-                for i in range(self.tableSize) :
+                for i in range(self._tableSize) :
                     if self[y][x][i]!=0 :
                         self[y][x][count]=self[y][x][i]
                         count+=1
-                while count < self.tableSize:
+                while count < self._tableSize:
                     self[y][x][count]=0
                     count+=1
 
@@ -255,16 +257,16 @@ class KruisGrid(np.ndarray):
                 break
 
     def resetScores(self,trigger):
-        if trigger<=self.numPlayers:
-            for i in range(trigger,self.numPlayers+1) :
+        if trigger<=self._numPlayers:
+            for i in range(trigger,self._numPlayers+1) :
                 self.scores[i]=[]
-                for j in range(self.numRounds) :
+                for j in range(self._numRounds) :
                     self.scores[i].append([])
-                    for k in range(self.numTables) :
+                    for k in range(self._numTables) :
                         self.scores[i][j].append(0)
 
     def save_data(self):
-        savefile="data_{}_{}.json".format(self.numTables,self.tableSize)
+        savefile="data_{}_{}.json".format(self._numTables,self._tableSize)
         data={}
         data["count"]=self.count
         data["runtime"]=time.time()*1000-self.start_time
@@ -275,7 +277,7 @@ class KruisGrid(np.ndarray):
     def show_default(self, count, process, grid):
         cls()
         print("self.count: {} calculations".format(procent[0]))
-        print("Speed: {} calculations/second  --- time remaining: {} ".format(process[1],process[2]))
+        # print("Speed: {} calculations/second  --- time remaining: {} ".format(process[1],process[2]))
         self.reorder()
         print(grid)
         #for n in self.timers:
@@ -296,10 +298,10 @@ class KruisGrid(np.ndarray):
         self.count+=1
         if self.running and not self.count%10000:
             self.save_data()
-        logger.debug("START SOLVE: {}".format(self.count))
+        logger.debug(f"START SOLVE: {count}")
         #self.show()
-        for n in range(value,self.numPlayers+1):
-            logger.debug("n: {}".format(n))
+        for n in range(value,self._numPlayers+1):
+            logger.debug("****** player: {} ******".format(n))
             n_mask1=np.any(np.isin(self,n),axis=2)
             n_mask2=np.any(n_mask1,axis=1)
             logger.debug("mask:\n {} - {}".format(n_mask1,n_mask2))
@@ -309,13 +311,13 @@ class KruisGrid(np.ndarray):
                 #check if round isn't the same as previous round
                 if not (y and (self[y]==self[y-1]).all()) :
                     #logger.debug("{}".format((self[y]==self[y-1]).all()))
-                    for x in range(self.numTables) :
+                    for x in range(self._numTables) :
                         logger.debug('table: {}'.format(x))
                         #check if table isn't the same as previous table
                         if not (x and (self[y][x]==self[y][x-1]).all()):
                             logger.debug("table is unique!")
                             if self.possible(y, x, n) :
-                                for i in range(x+1,self.numTables):
+                                for i in range(x+1,self._numTables):
                                     self.scores[n][y][i] = 0 if (self[y][i]==self[y][i-1]).all() else 1
                                 self.add_to_grid(y, x, n)
                                 self.level+=1
@@ -349,7 +351,7 @@ class KruisGrid(np.ndarray):
         return True
 
     def restart(self):
-        self.resetScores(self.tableSize+2)
+        self.resetScores(self._tableSize+2)
         self.load_data()
         self.start()
 
@@ -365,7 +367,7 @@ class KruisGrid(np.ndarray):
 
 
 if __name__ == "__main__":
-    grid=KruisGrid(5)
+    grid=KruisGrid(3,3)
     grid.show()
     grid.start()
     for x in range(10):
