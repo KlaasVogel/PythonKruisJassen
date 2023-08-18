@@ -9,21 +9,21 @@ trying to switch to a new way of solving this problem:
 total restart of building up code:
 (new) features:
 - list of players
-* each player tracks already coupled/blocked players
+each player tracks already coupled/blocked players
 
 - poule
-* list of player(nrs) who will play against eachother
-* list of candidates, player(nrs) who can still participate in this poule (not blocked by players already in this poule)
+list of player(nrs) who will play against eachother
+list of candidates, player(nrs) who can still participate in this poule (not blocked by players already in this poule)
 
 - playround
-* list of poules
+list of poules
 
 - schedule
-* list of playrounds
-* added function to fill first round
+list of playrounds
+added function to fill first round
 
 - main functions
-* add new player to a poule
+add new player to a poule
 
 
     

@@ -15,6 +15,7 @@ class Players(list[Player]):
     def __init__(self, num_players):
         [self.append(Player(nr+1)) for nr in range(num_players)]
 
+
 @dataclass
 class Poule:
     size: int
@@ -66,21 +67,22 @@ class Schedule(list[PlayRound]):
             raise WrongAmountOfPlayerException()
         max_rounds = math.floor((len(players)-1)/(poule_size-1))
         [self.append(PlayRound(players, poule_size)) for _ in range(max_rounds)]
-        print(self)
+        first_round = self.fill_first_row(players)
+        block_pairs = (len(players)-1)%(poule_size-1)
+        print(f"checking block: {block_pairs}")
 
-    def fill_first_row(self, players: Players):
+    def fill_first_row(self, players: Players) -> PlayRound:
         player_nr = 0
         for poule in self[0]:
             while not all(poule.players):
                 player_nr+=1
                 add_player_to_poule(player_nr, poule, players)
-        print(self)
-
+        return self[0]
 
 def MainSolver(num_players: int = DEFAULT_PLAYERS, poule_size: int = DEFAULT_POULE_SIZE):
     main_players = Players(num_players)
     main_schedule = Schedule(main_players, poule_size)
-    main_schedule.fill_first_row(main_players)
+    
 
 
 if __name__ == "__main__":
