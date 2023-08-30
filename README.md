@@ -5,6 +5,16 @@ First attempts were to slow (one attempt to find a solution took more than 3 day
 trying to switch to a new way of solving this problem:
 - waveform collapse with backtracing
 
+# V0.2.0.2:
+done: light refractoring
+start of recursive solving in schedule.
+- TODO:
+    save/copy state,
+    get list of candidates for poule
+    try every candidate, collapse schedule and try next solve
+    load previous state
+    no candidates -> return False
+
 # V0.2.0.1:
 total restart of building up code:
 (new) features:
