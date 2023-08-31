@@ -5,6 +5,12 @@ First attempts were to slow (one attempt to find a solution took more than 3 day
 trying to switch to a new way of solving this problem:
 - waveform collapse with backtracing
 
+# V0.2.03:
+added simple log
+test for 16 players works
+20 players still broken
+TODO: load state if solve does returns False
+
 # V0.2.0.2:
 done: light refractoring
 start of recursive solving in schedule.
